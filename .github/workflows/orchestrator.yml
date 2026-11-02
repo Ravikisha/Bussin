@@ -13,9 +13,12 @@ name: bussin-orchestrator
 # Required repository secrets:
 #   HF_TOKEN, HF_USER, KAGGLE_USERNAME, KAGGLE_KEY
 
+# The 15-minute schedule is removed: the project is finished (bussin-125m-realign-v1
+# completed 4,067/4,067 steps), so there is nothing left to drive. Restore
+#   schedule:
+#     - cron: "*/15 * * * *"
+# to resume orchestrating a new run.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       config:
