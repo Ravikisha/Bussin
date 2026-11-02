@@ -23,7 +23,7 @@ requested *register*: how slangy, emoji-heavy, abbreviated, drawn-out and formal
 It is a research / portfolio model. It is **not** instruction-tuned, not safety-tuned, and it writes
 rambling, often incoherent text. Read the limitations before using it.
 
-Code, data pipeline, evaluation and the full write-up: <https://github.com/Ravikisha/GenZLLM>
+Code, data pipeline, evaluation and the full write-up: <https://github.com/Ravikisha/Bussin>
 
 ## How it works
 
