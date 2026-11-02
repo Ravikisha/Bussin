@@ -92,11 +92,12 @@ def generate(model, tok, regs: list[Register], batch: int, seed: int,
             print(f"  cached {min(b + batch, len(regs))}/{len(regs)}", flush=True)
             continue
         torch.manual_seed(seed + b)
-        prompt = torch.tensor([[EOS] + tok.encode(r.to_tokens()).ids for r in chunk])
+        dev = next(model.parameters()).device
+        prompt = torch.tensor([[EOS] + tok.encode(r.to_tokens()).ids for r in chunk], device=dev)
         out = model.generate(prompt, max_new_tokens=SNIP, temperature=temperature,
                              top_k=top_k, top_p=top_p, eos_token_id=None)
         got = []
-        for row in out[:, prompt.size(1):].tolist():
+        for row in out[:, prompt.size(1):].cpu().tolist():
             if EOS in row:
                 row = row[: row.index(EOS)]
             got.append(tok.decode(row, skip_special_tokens=False))
@@ -149,6 +150,7 @@ def main() -> int:
     ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--seed", type=int, default=1000)
     ap.add_argument("--out", default="")
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--cache", default="eval_run/rce_cache.jsonl")
     args = ap.parse_args()
 
@@ -157,7 +159,8 @@ def main() -> int:
     raw = yaml.safe_load(open(args.config, encoding="utf-8"))
     model = BussinForCausalLM(BussinConfig.from_dict(raw["model"]))
     load_checkpoint(Path(args.ckpt), model, strict_verify=False)
-    model.eval()
+    model.to(args.device).eval()
+    print(f"device {args.device}", flush=True)
     tok = Tokenizer.from_file(args.tokenizer)
     ann = RegisterAnnotator(Lexicon.load(args.lexicon))
     global CACHE_TAG
