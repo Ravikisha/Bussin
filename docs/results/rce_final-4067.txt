@@ -1,0 +1,18 @@
+
+RCE: mean abs error vs request, n=200 (95% bootstrap CI on model-minus-null)
+dim        model    null   floor              model-null  spearman floor_rho
+slang      0.335   1.255   0.915      -0.920 [-1.090,-0.755]     0.797     0.326
+emoji      0.150   0.930   0.565      -0.780 [-0.940,-0.615]     0.841     0.378
+abbrev     0.015   0.065   0.100      -0.050 [-0.090,-0.015]     0.830    -0.053
+elong      0.115   0.525   0.430      -0.410 [-0.515,-0.305]     0.792     0.184
+formal     0.115   0.455   0.320      -0.340 [-0.430,-0.260]     0.756     0.242
+ALL        0.146   0.646   0.466      -0.500
+(model-null < 0 means the prefix steers output; floor = real same-doc text)
+
+SWEEP: request low vs high on one dimension, others 0 (n=50 each)
+dim      low->high  meas low meas high                diff
+slang         0->3      0.00      2.88     +2.88 [+2.80,+2.96]
+emoji         0->2      0.00      2.00     +2.00 [+2.00,+2.00]
+abbrev        0->3      0.00      2.40     +2.40 [+2.26,+2.54]
+elong         0->2      0.00      1.80     +1.80 [+1.66,+1.92]
+formal        0->3      0.02      2.62     +2.60 [+2.44,+2.74]
