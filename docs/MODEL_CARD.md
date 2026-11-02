@@ -13,6 +13,8 @@ tags:
 - from-scratch
 ---
 
+<p align="center"><img src="assets/banner.svg" alt="bussin" width="100%"></p>
+
 # bussin-125m
 
 A 125.9M-parameter language model **trained from scratch on free compute** (Kaggle T4s) to write in a
@@ -24,6 +26,8 @@ rambling, often incoherent text. Read the limitations before using it.
 Code, data pipeline, evaluation and the full write-up: <https://github.com/Ravikisha/GenZLLM>
 
 ## How it works
+
+![How it works](assets/how-it-works.svg)
 
 Every training document was prefixed with five measured register control tokens:
 
@@ -39,7 +43,7 @@ not from human raters.
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-repo = "GodAsap/bussin-125m"
+repo = "Ravikishan/bussin-125m"
 tok = AutoTokenizer.from_pretrained(repo)
 model = AutoModelForCausalLM.from_pretrained(repo).eval()
 
@@ -59,6 +63,8 @@ context 1,024. The export was checked against the original implementation: max l
 100% argmax agreement.
 
 ## Training history (read this)
+
+![Timeline](assets/timeline.svg)
 
 1. **Run v1:** 25,757 steps, 6.74B tokens, about 110 GPU-hours. A bug in the loss shifted the targets a
    second time, so the model was trained to predict the token **two** positions ahead instead of the next
@@ -99,6 +105,10 @@ What this does and does not show:
   its agreement with a human rater (me, one person) was Spearman 0.48 against a 0.70 gate I set.
 - Few high-slang requests (21 of 200 at slang 3-4) and almost no abbreviations in real requests (193 of 200 at 0).
 - One checkpoint, one seed set, temperature 0.8.
+
+![Register error by dimension](assets/rce-chart.svg)
+
+![Single-dimension sweep](assets/sweep-chart.svg)
 
 Full output: `docs/results/rce_final-4067.txt` in the GitHub repo.
 
