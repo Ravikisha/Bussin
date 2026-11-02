@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import json
 import random
 import sys
@@ -48,6 +49,24 @@ from bussin.relay.checkpoint import load_checkpoint
 EOS = 0
 DIMS = ["slang", "emoji", "abbrev", "elong", "formal"]
 SNIP = 48
+# Finished batches are appended here, so a run killed for memory resumes where it
+# stopped instead of regenerating everything. Keyed by everything that shapes a batch.
+CACHE: dict[str, list[str]] = {}
+CACHE_PATH: Path | None = None
+CACHE_TAG = ""
+
+
+def cache_load(path: Path) -> None:
+    global CACHE_PATH
+    CACHE_PATH = path
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:      # last line cut off by a kill
+                continue
+            CACHE[row["key"]] = row["texts"]
+        print(f"resumed {len(CACHE)} cached batches from {path}", flush=True)
 
 
 def load_docs(val_dir: Path, per_file: int, rng: random.Random) -> list[str]:
@@ -65,14 +84,27 @@ def generate(model, tok, regs: list[Register], batch: int, seed: int,
     out_texts: list[str] = []
     for b in range(0, len(regs), batch):
         chunk = regs[b:b + batch]
+        key = hashlib.sha1(("|".join([CACHE_TAG, str(seed + b), str(temperature), str(top_k),
+                                      str(top_p)] + [r.to_tokens() for r in chunk])
+                            ).encode("utf-8")).hexdigest()
+        if key in CACHE:
+            out_texts += CACHE[key]
+            print(f"  cached {min(b + batch, len(regs))}/{len(regs)}", flush=True)
+            continue
         torch.manual_seed(seed + b)
         prompt = torch.tensor([[EOS] + tok.encode(r.to_tokens()).ids for r in chunk])
         out = model.generate(prompt, max_new_tokens=SNIP, temperature=temperature,
                              top_k=top_k, top_p=top_p, eos_token_id=None)
+        got = []
         for row in out[:, prompt.size(1):].tolist():
             if EOS in row:
                 row = row[: row.index(EOS)]
-            out_texts.append(tok.decode(row, skip_special_tokens=False))
+            got.append(tok.decode(row, skip_special_tokens=False))
+        out_texts += got
+        CACHE[key] = got
+        if CACHE_PATH is not None:
+            with open(CACHE_PATH, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"key": key, "texts": got}) + "\n")
         print(f"  generated {min(b + batch, len(regs))}/{len(regs)}", flush=True)
     return out_texts
 
@@ -117,6 +149,7 @@ def main() -> int:
     ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--seed", type=int, default=1000)
     ap.add_argument("--out", default="")
+    ap.add_argument("--cache", default="eval_run/rce_cache.jsonl")
     args = ap.parse_args()
 
     rng = random.Random(0)
@@ -127,6 +160,9 @@ def main() -> int:
     model.eval()
     tok = Tokenizer.from_file(args.tokenizer)
     ann = RegisterAnnotator(Lexicon.load(args.lexicon))
+    global CACHE_TAG
+    CACHE_TAG = f"{args.ckpt}|{args.batch}"
+    cache_load(Path(args.cache))
 
     # documents with two full snippets: one to request from, one for the noise floor
     cand = load_docs(Path(args.val_dir), 5000, rng)
